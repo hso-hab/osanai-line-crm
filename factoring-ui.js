@@ -23,7 +23,7 @@ function renderFactoring(){
  const q=$('#fc-search').value.trim().toLowerCase();
  const shown=rows.filter(c=>(!o.start||c.applicationDate>=o.start)&&(!o.end||c.applicationDate<=o.end)&&(!q||[c.customerName,c.id,c.reference,c.debtor,c.reason].join(' ').toLowerCase().includes(q))&&(caseFilter==='void'?c.void:!c.void&&(caseFilter==='all'||caseFilter==='late'&&C.state(c).startsWith('延滞')||c.status===caseFilter)));
  $('#fc-case-count').textContent=shown.length+'件表示';
- $('#fc-cases').innerHTML=shown.length?shown.sort((a,b)=>b.applicationDate.localeCompare(a.applicationDate)).map(c=>`<button class="fc-case" data-case="${esc(c.id)}"><div><strong>${esc(c.customerName)}</strong><span class="fc-tag ${C.state(c).startsWith('延滞')?'fc-alert':''}">${esc(C.state(c))}</span></div><small>${esc(c.id)} · ${esc(c.reference||'請求書番号未入力')}</small><p>希望 ${yen(c.requestedAmount)}${c.status==='purchased'?' / 買取 '+yen(c.purchaseAmount):''}</p>${c.status==='purchased'?`<small>回収 ${yen(C.paid(c))} / ${yen(c.invoiceAmount)} · 期日 ${esc(c.dueDate)}</small>`:`<small>申込 ${esc(c.applicationDate)}${c.status==='rejected'?' · '+esc(c.reason):''}</small>`}<span class="fc-open">詳細・審査・入金 →</span></button>`).join(''):'<p class="empty">案件はありません。「申込を登録」から追加できます。</p>';
+ $('#fc-cases').innerHTML=shown.length?shown.sort((a,b)=>b.applicationDate.localeCompare(a.applicationDate)).map(c=>`<button class="fc-case" data-case="${esc(c.id)}"><div><strong>${esc(c.customerName)}</strong><span class="fc-tag ${C.state(c).startsWith('延滞')?'fc-alert':''}">${esc(C.state(c))}</span></div>${window.CRMOperations.activeNotices(customers.find(x=>x.id===c.customerId)).length?'<span class="fc-tag fc-alert">通知あり・責任者確認</span>':''}<small>${esc(c.id)} · ${esc(c.reference||'請求書番号未入力')}</small><p>希望 ${yen(c.requestedAmount)}${c.status==='purchased'?' / 買取 '+yen(c.purchaseAmount):''}</p>${c.status==='purchased'?`<small>回収 ${yen(C.paid(c))} / ${yen(c.invoiceAmount)} · 期日 ${esc(c.dueDate)}</small>`:`<small>申込 ${esc(c.applicationDate)}${c.status==='rejected'?' · '+esc(c.reason):''}</small>`}<span class="fc-open">詳細・審査・入金 →</span></button>`).join(''):'<p class="empty">案件はありません。「申込を登録」から追加できます。</p>';
  $('#fc-load-demo').hidden=rows.length>0;
 }
 function update(id,next,text){
@@ -45,7 +45,7 @@ function openCase(id=null,customerId=''){
  $('#fc-dialog-title').textContent=c?c.id+' · '+C.state(c):'申込案件を登録';
  $('#fc-form-fields').disabled=!!c?.void;$('#fc-save').hidden=!!c?.void;
  $('#fc-toggle').hidden=!c;$('#fc-toggle').textContent=c?.void?'この案件を復元':'この案件を取消';
- syncFields();renderReceipts(c);clean=snapshot();if(!$('#fc-dialog').open)$('#fc-dialog').showModal();
+ syncFields();renderReceipts(c);window.dispatchEvent(new CustomEvent('crm-case-open',{detail:{id,customerId:f.elements.customer.value}}));clean=snapshot();if(!$('#fc-dialog').open)$('#fc-dialog').showModal();
 }
 function closeCase(){if((snapshot()!==clean||$('#fc-receipt-form').elements.amount.value||$('#fc-receipt-form').elements.memo.value)&&!confirm('保存していない入力を破棄して閉じますか？'))return;$('#fc-dialog').close();edit=null;}
 function renderReceipts(c){
@@ -67,9 +67,9 @@ $('#fc-form').onsubmit=e=>{e.preventDefault();const f=e.currentTarget;const c=ed
  if(c?.status==='purchased'&&next.status!=='purchased')throw Error('買取済の審査履歴は巻き戻せません。誤登録は案件取消で除外してください。');
  if(next.status!=='purchased'){next.purchaseAmount=0;next.cost=0;next.purchaseDate='';next.dueDate='';}
  if(!['approved','rejected','purchased'].includes(next.status))next.decisionDate='';if(next.status!=='rejected')next.reason='';
- if(!customers.some(c=>c.id===next.customerId))throw Error('顧客を選択してください。');C.validate(next);
+ const selectedCustomer=customers.find(c=>c.id===next.customerId);if(!selectedCustomer)throw Error('顧客を選択してください。');const review=window.CRMOperations.decisionGuard(selectedCustomer,c,next,{ack:f.elements.reviewAck.checked,reviewer:f.elements.reviewer.value,reason:f.elements.reviewReason.value});if(review)next.noticeReview=review;C.validate(next);
  const desc=`${C.labels[next.status]} / 希望 ${yen(next.requestedAmount)} / 買取 ${yen(next.purchaseAmount)} / 額面 ${yen(next.invoiceAmount)} / 費用 ${yen(next.cost)} / 申込 ${next.applicationDate} / 審査 ${next.decisionDate||'未設定'} / 買取日 ${next.purchaseDate||'未設定'} / 期日 ${next.dueDate||'未設定'}`;
- if(update(next.id,next,(c?'更新':'登録')+'：'+desc+(c?'\n変更前：'+JSON.stringify({status:c.status,requestedAmount:c.requestedAmount,purchaseAmount:c.purchaseAmount,invoiceAmount:c.invoiceAmount,cost:c.cost,applicationDate:c.applicationDate,decisionDate:c.decisionDate,purchaseDate:c.purchaseDate,dueDate:c.dueDate,reference:c.reference,debtor:c.debtor,reason:c.reason,memo:c.memo}):''))){openCase(next.id);notify('案件を保存し、審査・買取・弁済集計を更新しました。');}
+ if(update(next.id,next,(c?'更新':'登録')+'：'+desc+(review?'\n責任者確認：'+review.reviewer+' / '+review.reason:'')+(c?'\n変更前：'+JSON.stringify({status:c.status,requestedAmount:c.requestedAmount,purchaseAmount:c.purchaseAmount,invoiceAmount:c.invoiceAmount,cost:c.cost,applicationDate:c.applicationDate,decisionDate:c.decisionDate,purchaseDate:c.purchaseDate,dueDate:c.dueDate,reference:c.reference,debtor:c.debtor,reason:c.reason,memo:c.memo}):''))){openCase(next.id);notify('案件を保存し、審査・買取・弁済集計を更新しました。');}
  }catch(err){$('#fc-error').textContent=err.message;}
 };
 $('#fc-toggle').onclick=()=>{const c=find(edit);if(!c||!confirm(c.void?'案件を復元して集計に戻しますか？':'案件を取消して集計から除外しますか？ 入金履歴は残り、復元できます。'))return;const next={...c,void:!c.void};try{C.validate(next);if(update(c.id,next,next.void?'案件を取消（入金履歴を保持）':'案件を復元'))openCase(c.id);}catch(err){$('#fc-error').textContent=err.message;}};
