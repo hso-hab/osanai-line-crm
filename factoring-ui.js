@@ -80,7 +80,7 @@ $('#fc-receipt-form').onsubmit=e=>{e.preventDefault();const c=find(edit),f=e.cur
  }catch(err){$('#fc-receipt-error').textContent=err.message;}
 };
 $('#fc-receipts').onclick=e=>{const c=find(edit),b=e.target.closest('[data-receipt-edit],[data-receipt-toggle]');if(!b||!c)return;const id=b.dataset.receiptEdit||b.dataset.receiptToggle,r=c.receipts.find(r=>r.id===id);if(!r)return;
- if(b.dataset.receiptEdit){receiptEdit=id;const f=$('#fc-receipt-form');for(const k of ['date','amount','memo'])f.elements[k].value=r[k];$('#fc-receipt-save').textContent='入金の変更を保存';f.scrollIntoView({block:'nearest',behavior:'smooth'});return;}
+ if(b.dataset.receiptEdit){if(r.bankRowId){notify('銀行照合から登録した入金は、取消してから入金照合でやり直してください。');return;}receiptEdit=id;const f=$('#fc-receipt-form');for(const k of ['date','amount','memo'])f.elements[k].value=r[k];$('#fc-receipt-save').textContent='入金の変更を保存';f.scrollIntoView({block:'nearest',behavior:'smooth'});return;}
  if(!confirm(r.void?'この入金を復元しますか？':'この入金を取消しますか？ 記録は残ります。'))return;
  const next={...c,receipts:c.receipts.map(x=>x.id===id?{...x,void:!x.void}:x)};try{C.validate(next);if(update(c.id,next,`入金${r.void?'復元':'取消'}：${r.date} / ${yen(r.amount)}`)){renderReceipts(find(c.id));$('#fc-dialog-title').textContent=c.id+' · '+C.state(find(c.id));$('#fc-receipt-error').textContent='';}}catch(err){$('#fc-receipt-error').textContent=err.message;}
 };
