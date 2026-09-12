@@ -1,0 +1,9 @@
+/* Each URL exposes only its own workspace; shared editors retain one data model. */
+main>.ops-section,main>#ops-dashboard,main>#wb-tools{display:none!important}
+body[data-page="sales"] #ops-dashboard,body[data-page="customers"] #manual-details,body[data-page="today"] #manual-details,body[data-page="analytics"] #analytics-details,body[data-page="ledger"] #legacy-details,body[data-page="notices"] #notices-details,body[data-page="tools"] #wb-tools,body[data-page="documents"] #wb-documents,body[data-page="bank"] #wb-bank,body[data-page="cash"] #wb-cash,body[data-page="reminders"] #wb-reminders,body[data-page="jobs"] #wb-jobs,body[data-page="acquisition"] #wb-acquisition,body[data-page="backup"] #wb-backup{display:block!important}
+body:not([data-page="sales"]) main>.ops-status{display:none}
+main>details.page-content>summary{display:none}main>details.page-content{border:0;background:transparent;padding:0;margin-top:20px}
+#manual-details.page-content{display:flex!important;flex-direction:column;gap:18px}#manual-details.page-content>.customer-panel{order:1}#manual-details.page-content>.metrics{order:0}#manual-details.page-content>.ops-manual-head{order:2}#manual-details.page-content>.sales-panel{order:3}
+.sidebar a.nav-item{text-decoration:none}.wb-shortcuts a{display:flex;align-items:center;justify-content:center;gap:7px;text-align:center;padding:16px 10px;border:1px solid var(--line);border-radius:9px;background:#f6f9f7;font-size:13px;font-weight:650;min-height:56px;text-decoration:none}.wb-shortcuts a:hover{border-color:var(--green)}
+.page-context{margin:0 0 15px;font-size:12px}.page-context a{color:var(--green);text-decoration:underline}
+@media(max-width:650px){.wb-shortcuts a{font-size:12px;padding:12px 7px}}
