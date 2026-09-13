@@ -36,7 +36,7 @@ async function update(id,next,text){
 function snapshot(){return JSON.stringify([...new FormData($('#fc-form')).entries()])}
 function syncFields(){const p=$('#fc-form').elements.status.value;$('#fc-purchase-fields').hidden=p!=='purchased';$('#fc-decision-fields').hidden=!['approved','rejected','purchased'].includes(p);$('#fc-reason-label').hidden=p!=='rejected';for(const n of ['purchaseAmount','purchaseDate','dueDate'])$('#fc-form').elements[n].required=p==='purchased';$('#fc-form').elements.decisionDate.required=['approved','rejected','purchased'].includes(p);$('#fc-form').elements.reason.required=p==='rejected';for(const n of ['purchaseAmount','purchaseDate','dueDate','cost'])$('#fc-form').elements[n].disabled=p!=='purchased';$('#fc-form').elements.decisionDate.disabled=!['approved','rejected','purchased'].includes(p);$('#fc-form').elements.reason.disabled=p!=='rejected';}
 function openCase(id=null,customerId=''){
- edit=id;receiptEdit=null;const c=id?find(id):null;const f=$('#fc-form');f.reset();$('#fc-error').textContent='';$('#fc-receipt-error').textContent='';
+ $('#fc-dialog').classList.remove('receipt-mode');$('#fc-receipt-customer')?.remove();edit=id;receiptEdit=null;const c=id?find(id):null;const f=$('#fc-form');f.reset();$('#fc-error').textContent='';$('#fc-receipt-error').textContent='';
  f.elements.customer.innerHTML=customers.map(c=>`<option value="${esc(c.id)}">${esc(c.name)} · ${esc(c.id)}</option>`).join('');f.elements.customer.disabled=!!c;
  if(c||customerId)f.elements.customer.value=c?.customerId||customerId;
  for(const k of ['reference','debtor','status','decisionDate','invoiceAmount','requestedAmount','purchaseAmount','cost','purchaseDate','dueDate','reason','memo'])f.elements[k].value=c?.[k]??({status:'received',cost:0,purchaseAmount:0}[k]??'');
@@ -92,6 +92,6 @@ $('#fc-all-time').onclick=()=>{$('#fc-from').value='';$('#fc-to').value='';range
 $('#fc-this-month').onclick=()=>{$('#fc-from').value=F.range('month',today()).start;$('#fc-to').value=today();rangeChange()};
 $('#fc-load-demo').onclick=async ()=>{if(flatten().length||!confirm('既存顧客・取引はそのままに、サンプル顧客へ架空の審査・入金案件を追加しますか？'))return;const next=C.seed(customers);if(!next.some(c=>c.factoringCases.length)){notify('対応するサンプル顧客がいません。申込を登録してお試しください。');return;}if(await persist(next)){render();notify('架空の審査サンプルを追加しました。');}};
 window.addEventListener('crm-render',renderFactoring);
-window.addEventListener('crm-open-case',e=>{if(find(e.detail.id))openCase(e.detail.id)});
+window.addEventListener('crm-open-case',e=>{const c=find(e.detail.id);if(!c)return;openCase(c.id);if(e.detail.receipt&&c.status==='purchased'&&!c.void){$('#fc-dialog').classList.add('receipt-mode');const title=document.createElement('div');title.id='fc-receipt-customer';title.innerHTML=`<strong>${esc(c.customerName)}</strong><p>${esc(c.reference||c.id)} · 回収期日 ${esc(c.dueDate)}</p><button type="button" class="fc-secondary">案件詳細も表示</button>`;title.querySelector('button').onclick=()=>{$('#fc-dialog').classList.remove('receipt-mode');title.querySelector('button').hidden=true;};$('#fc-receipt-section').prepend(title);$('#fc-receipt-section').scrollIntoView({block:'start'});$('#fc-receipt-form').elements.amount.focus();}});
 renderFactoring();
 })();
