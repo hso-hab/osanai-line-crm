@@ -1,0 +1,31 @@
+/* Preserve the existing green palette and cards; enlarge controls and space feedback. */
+.customer-controls{display:flex;align-items:end;gap:12px;flex-wrap:wrap;padding:0 22px 12px}
+.customer-chips{display:flex;flex-wrap:wrap;gap:8px;flex:1 1 380px}
+.customer-chips button{min-height:44px;padding:10px 14px;border:1px solid var(--line);border-radius:8px;font-size:13px;background:#fff}
+.customer-chips button[aria-pressed=true]{background:var(--green);border-color:var(--green);color:#fff;font-weight:700}
+.customer-controls>label{font-size:12px;flex:1 1 220px}.customer-controls select{width:100%;font-size:14px}
+#customer-filter-help:empty{display:none}.form-error-summary:not(:empty){background:#fff1ee;border-left:4px solid #b23324;padding:12px;border-radius:5px;line-height:1.7;color:#932617;font-size:13px}
+.field-error{display:block;color:#a52b1c;font-size:13px;font-weight:500;line-height:1.65;margin:6px 0;overflow-wrap:anywhere}
+[aria-invalid=true]{border:2px solid #b23324!important;background:#fff9f7!important}
+.dialog-feedback{position:sticky;top:62px;z-index:2;padding:12px 18px;background:#e6f4ec;color:#184d37;border-bottom:1px solid #b8d8c5;font-size:13px;line-height:1.6;overflow-wrap:anywhere;pointer-events:none}
+button,a,input,select,textarea,summary{touch-action:manipulation}button:focus-visible,a:focus-visible,summary:focus-visible{outline:3px solid #32765b;outline-offset:3px}
+.empty p{line-height:1.8;overflow-wrap:anywhere}.empty button{margin:8px 0}.drawer-header h2{min-width:0;overflow-wrap:anywhere}.drawer-header .icon-button{flex-shrink:0}
+@media(max-width:768px){
+ button,.icon-button,.text-button,.fc-secondary,.nav-item,summary,input,select{min-height:44px}
+ .icon-button{min-width:44px}.transaction-actions,.quick-date-buttons{gap:8px;flex-wrap:wrap}
+ .transaction-actions button{min-width:56px;padding:10px 12px}
+ .customer-controls{padding:0 16px 12px;gap:10px}.customer-chips{flex-basis:100%;display:grid;grid-template-columns:1fr 1fr}
+ .customer-chips button{padding:10px 6px}.customer-controls>label{flex-basis:100%}
+ .customer-controls>#customer-reset{width:100%}
+ dialog label,input,select,textarea{font-size:16px!important}dialog label{line-height:1.7}
+ .save-row{flex-wrap:wrap;gap:12px}.save-row .primary{flex:1;white-space:normal;min-width:120px}
+ .section-label,.list-heading,.list-heading>div{flex-wrap:wrap}
+ .customer-name strong,.next-cell strong,.fc-case,.wb-bank-row{overflow-wrap:anywhere}
+ .customer-actions button{font-size:12px;white-space:normal;line-height:1.5}
+ .dialog-feedback{top:62px}.fc-note{line-height:1.8}
+}
+@media(max-width:390px){dialog .field-grid{grid-template-columns:1fr}.drawer-header{gap:8px}.list-heading .date-label{width:100%}}
+
+.dialog-feedback[data-error=true]{background:#fff1ee;color:#932617;border-color:#e9bbb3}
+
+@media(max-width:768px){body button,body select,body summary,body .nav-item{min-height:44px!important}body .icon-button{min-width:44px}}
