@@ -32,7 +32,7 @@ document.addEventListener('DOMContentLoaded',()=>{
   }else{
    const rows=CRMManagement.recovery([c]);
    if(rows.length===1){payment(rows[0].id);return;}
-   $('#quick-fields').innerHTML=rows.length?`<label>対象案件<select name="caseId" required><option value="">案件を選択してください</option>${rows.map(r=>{const a=c.factoringCases.find(a=>a.id===r.id);return `<option value="${esc(r.id)}">${esc(a.reference||r.id)} · 期日 ${r.due} · 未回収 ${yen(r.amount)}</option>`;}).join('')}</select></label>`:'<p>未回収の買取案件はありません。</p><a class="fc-secondary" href="cases.html">案件管理を開く →</a>';
+   $('#quick-fields').innerHTML=rows.length?`<label>対象案件<select name="caseId" required><option value="">案件を選択してください</option>${rows.map(r=>{const a=c.factoringCases.find(a=>a.id===r.id);return `<option value="${esc(r.id)}">${esc(a.reference||r.id)} · 期日 ${r.due} · 未回収額 ${yen(r.amount)}</option>`;}).join('')}</select></label>`:'<p>未回収の買取案件はありません。</p><a class="fc-secondary" href="cases.html">案件管理を開く →</a>';
    $('#quick-save').textContent='入金記録へ進む';$('#quick-save').hidden=!rows.length;
   }
   if(mode!=='payment')$('#quick-save').hidden=false;

@@ -16,7 +16,7 @@ window.CRMUsability=(()=>{
  function renderFilters(){
   document.querySelectorAll('[data-customer-filter]').forEach(b=>b.setAttribute('aria-pressed',String(b.dataset.customerFilter===filter)));
   document.querySelector('.list-sort-label:not(#customer-filter-help)').textContent=modes[document.getElementById('customer-sort').value];
-  document.getElementById('customer-filter-help').textContent=filter==='late'?'期限超過：対応日または回収期日を過ぎた顧客（未回収分のみ）':filter==='today'?'今日対応：次回対応日が今日の顧客（完了を除く）':filter==='outstanding'?'未回収あり：買取済案件の残額が1円以上の顧客':'';
+  document.getElementById('customer-filter-help').textContent=filter==='late'?'期限超過：未完了の対応日超過、または未回収の回収期限超過':filter==='today'?'今日対応：次回対応日が今日の顧客（完了を除く）':filter==='outstanding'?'未回収あり：買取済案件の残額が1円以上の顧客':'';
  }
  function reveal(field){for(let node=field.parentElement;node;node=node.parentElement)if(node.tagName==='DETAILS')node.open=true;}
  function clear(field){
@@ -70,5 +70,6 @@ window.CRMUsability=(()=>{
   }).observe(el,{childList:true,characterData:true,subtree:true}));
   document.querySelectorAll('dialog').forEach(d=>d.addEventListener('toggle',()=>{if(!d.open){d.querySelectorAll('[data-field-error]').forEach(clear);d.querySelectorAll('.dialog-feedback').forEach(e=>e.remove());}}));
  });
- return {info,matches,compare,renderFilters,reset(){filter='all';},error,feedback};
+ function axisAmount(value){const n=Math.abs(value);const [unit,label]=n>=1e12?[1e12,'兆']:n>=1e8?[1e8,'億']:n>=1e4?[1e4,'万']:[1,''];return String(Math.round(value/unit*10)/10)+label;}
+ return {axisAmount,info,matches,compare,renderFilters,reset(){filter='all';},error,feedback};
 })();
