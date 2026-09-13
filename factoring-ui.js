@@ -26,11 +26,11 @@ function renderFactoring(){
  $('#fc-cases').innerHTML=shown.length?shown.sort((a,b)=>b.applicationDate.localeCompare(a.applicationDate)).map(c=>`<button class="fc-case" data-case="${esc(c.id)}"><div><strong>${esc(c.customerName)}</strong><span class="fc-tag ${C.state(c).startsWith('延滞')?'fc-alert':''}">${esc(C.state(c))}</span></div>${window.CRMOperations.activeNotices(customers.find(x=>x.id===c.customerId)).length?'<span class="fc-tag fc-alert">通知あり・責任者確認</span>':''}<small>${esc(c.id)} · ${esc(c.reference||'請求書番号未入力')}</small><p>希望 ${yen(c.requestedAmount)}${c.status==='purchased'?' / 買取 '+yen(c.purchaseAmount):''}</p>${c.status==='purchased'?`<small>回収 ${yen(C.paid(c))} / ${yen(c.invoiceAmount)} · 期日 ${esc(c.dueDate)}</small>`:`<small>申込 ${esc(c.applicationDate)}${c.status==='rejected'?' · '+esc(c.reason):''}</small>`}<span class="fc-open">詳細・審査・入金 →</span></button>`).join(''):'<p class="empty">案件はありません。「申込を登録」から追加できます。</p>';
  $('#fc-load-demo').hidden=rows.length>0;
 }
-function update(id,next,text){
+async function update(id,next,text){
  const customer=customers.find(c=>(c.factoringCases||[]).some(a=>a.id===id))||customers.find(c=>c.id===next.customerId);if(!customer)return false;
  const exists=(customer.factoringCases||[]).find(a=>a.id===id);const record={...next,history:[...(exists?.history||[]),{at:stamp(),text}]};delete record.customerName;delete record.customerId;
  const entries=exists?customer.factoringCases.map(a=>a.id===id?record:a):[...(customer.factoringCases||[]),record];
- if(!persist(customers.map(c=>c.id===customer.id?{...c,factoringCases:entries,history:[...c.history,{at:stamp(),text:'案件 '+id+'：'+text}]}:c)))return false;
+ if(!await persist(customers.map(c=>c.id===customer.id?{...c,factoringCases:entries,history:[...c.history,{at:stamp(),text:'案件 '+id+'：'+text}]}:c)))return false;
  render();refreshCustomerAfterSale();return true;
 }
 function snapshot(){return JSON.stringify([...new FormData($('#fc-form')).entries()])}
@@ -59,7 +59,7 @@ $('#fc-add').onclick=()=>openCase();$('#fc-close').onclick=closeCase;$('#fc-dial
 $('#fc-nav').onclick=()=>$('#factoring-panel').scrollIntoView({behavior:'smooth'});
 $('#fc-cases').onclick=e=>{const b=e.target.closest('[data-case]');if(b)openCase(b.dataset.case)};
 $('#fc-form').elements.status.onchange=syncFields;
-$('#fc-form').onsubmit=e=>{e.preventDefault();const f=e.currentTarget;const c=edit?find(edit):null;
+$('#fc-form').onsubmit=async e=>{e.preventDefault();const f=e.currentTarget;const c=edit?find(edit):null;
  try{
  const next={...(c||{}),id:c?.id||'FC-'+crypto.randomUUID().slice(0,8),customerId:f.elements.customer.value,void:false,receipts:c?.receipts||[]};
  for(const k of ['reference','debtor','status','decisionDate','applicationDate','purchaseDate','dueDate','reason','memo'])next[k]=f.elements[k].value.trim();
@@ -69,20 +69,20 @@ $('#fc-form').onsubmit=e=>{e.preventDefault();const f=e.currentTarget;const c=ed
  if(!['approved','rejected','purchased'].includes(next.status))next.decisionDate='';if(next.status!=='rejected')next.reason='';
  const selectedCustomer=customers.find(c=>c.id===next.customerId);if(!selectedCustomer)throw Error('顧客を選択してください。');const review=window.CRMOperations.decisionGuard(selectedCustomer,c,next,{ack:f.elements.reviewAck.checked,reviewer:f.elements.reviewer.value,reason:f.elements.reviewReason.value});if(review)next.noticeReview=review;C.validate(next);
  const desc=`${C.labels[next.status]} / 希望 ${yen(next.requestedAmount)} / 買取 ${yen(next.purchaseAmount)} / 額面 ${yen(next.invoiceAmount)} / 費用 ${yen(next.cost)} / 申込 ${next.applicationDate} / 審査 ${next.decisionDate||'未設定'} / 買取日 ${next.purchaseDate||'未設定'} / 期日 ${next.dueDate||'未設定'}`;
- if(update(next.id,next,(c?'更新':'登録')+'：'+desc+(review?'\n責任者確認：'+review.reviewer+' / '+review.reason:'')+(c?'\n変更前：'+JSON.stringify({status:c.status,requestedAmount:c.requestedAmount,purchaseAmount:c.purchaseAmount,invoiceAmount:c.invoiceAmount,cost:c.cost,applicationDate:c.applicationDate,decisionDate:c.decisionDate,purchaseDate:c.purchaseDate,dueDate:c.dueDate,reference:c.reference,debtor:c.debtor,reason:c.reason,memo:c.memo}):''))){openCase(next.id);notify('案件を保存し、審査・買取・弁済集計を更新しました。');}
+ if(await update(next.id,next,(c?'更新':'登録')+'：'+desc+(review?'\n責任者確認：'+review.reviewer+' / '+review.reason:'')+(c?'\n変更前：'+JSON.stringify({status:c.status,requestedAmount:c.requestedAmount,purchaseAmount:c.purchaseAmount,invoiceAmount:c.invoiceAmount,cost:c.cost,applicationDate:c.applicationDate,decisionDate:c.decisionDate,purchaseDate:c.purchaseDate,dueDate:c.dueDate,reference:c.reference,debtor:c.debtor,reason:c.reason,memo:c.memo}):''))){openCase(next.id);notify('案件を保存し、審査・買取・弁済集計を更新しました。');}
  }catch(err){$('#fc-error').textContent=err.message;}
 };
-$('#fc-toggle').onclick=()=>{const c=find(edit);if(!c||!confirm(c.void?'案件を復元して集計に戻しますか？':'案件を取消して集計から除外しますか？ 入金履歴は残り、復元できます。'))return;const next={...c,void:!c.void};try{C.validate(next);if(update(c.id,next,next.void?'案件を取消（入金履歴を保持）':'案件を復元'))openCase(c.id);}catch(err){$('#fc-error').textContent=err.message;}};
-$('#fc-receipt-form').onsubmit=e=>{e.preventDefault();const c=find(edit),f=e.currentTarget;if(!c||c.void||c.status!=='purchased')return;try{
+$('#fc-toggle').onclick=async ()=>{const c=find(edit);if(!c||!confirm(c.void?'案件を復元して集計に戻しますか？':'案件を取消して集計から除外しますか？ 入金履歴は残り、復元できます。'))return;const next={...c,void:!c.void};try{C.validate(next);if(await update(c.id,next,next.void?'案件を取消（入金履歴を保持）':'案件を復元'))openCase(c.id);}catch(err){$('#fc-error').textContent=err.message;}};
+$('#fc-receipt-form').onsubmit=async e=>{e.preventDefault();const c=find(edit),f=e.currentTarget;if(!c||c.void||c.status!=='purchased')return;try{
  const prior=c.receipts.find(r=>r.id===receiptEdit);const r={id:prior?.id||'RC-'+crypto.randomUUID(),date:f.elements.date.value,amount:F.amount(f.elements.amount.value),memo:f.elements.memo.value.trim(),void:false};
  const next={...c,receipts:prior?c.receipts.map(x=>x.id===r.id?r:x):[...c.receipts,r]};C.validate(next);
- if(update(c.id,next,`${prior?'入金編集':'入金登録'}：${r.date} / ${yen(r.amount)}${prior?'（変更前 '+prior.date+' / '+yen(prior.amount)+'）':''}`)){renderReceipts(find(c.id));$('#fc-dialog-title').textContent=c.id+' · '+C.state(find(c.id));$('#fc-receipt-error').textContent='';notify('入金を保存しました。');}
+ if(await update(c.id,next,`${prior?'入金編集':'入金登録'}：${r.date} / ${yen(r.amount)}${prior?'（変更前 '+prior.date+' / '+yen(prior.amount)+'）':''}`)){renderReceipts(find(c.id));$('#fc-dialog-title').textContent=c.id+' · '+C.state(find(c.id));$('#fc-receipt-error').textContent='';notify('入金を保存しました。');}
  }catch(err){$('#fc-receipt-error').textContent=err.message;}
 };
-$('#fc-receipts').onclick=e=>{const c=find(edit),b=e.target.closest('[data-receipt-edit],[data-receipt-toggle]');if(!b||!c)return;const id=b.dataset.receiptEdit||b.dataset.receiptToggle,r=c.receipts.find(r=>r.id===id);if(!r)return;
+$('#fc-receipts').onclick=async e=>{const c=find(edit),b=e.target.closest('[data-receipt-edit],[data-receipt-toggle]');if(!b||!c)return;const id=b.dataset.receiptEdit||b.dataset.receiptToggle,r=c.receipts.find(r=>r.id===id);if(!r)return;
  if(b.dataset.receiptEdit){if(r.bankRowId){notify('銀行照合から登録した入金は、取消してから入金照合でやり直してください。');return;}receiptEdit=id;const f=$('#fc-receipt-form');for(const k of ['date','amount','memo'])f.elements[k].value=r[k];$('#fc-receipt-save').textContent='入金の変更を保存';f.scrollIntoView({block:'nearest',behavior:'smooth'});return;}
  if(!confirm(r.void?'この入金を復元しますか？':'この入金を取消しますか？ 記録は残ります。'))return;
- const next={...c,receipts:c.receipts.map(x=>x.id===id?{...x,void:!x.void}:x)};try{C.validate(next);if(update(c.id,next,`入金${r.void?'復元':'取消'}：${r.date} / ${yen(r.amount)}`)){renderReceipts(find(c.id));$('#fc-dialog-title').textContent=c.id+' · '+C.state(find(c.id));$('#fc-receipt-error').textContent='';}}catch(err){$('#fc-receipt-error').textContent=err.message;}
+ const next={...c,receipts:c.receipts.map(x=>x.id===id?{...x,void:!x.void}:x)};try{C.validate(next);if(await update(c.id,next,`入金${r.void?'復元':'取消'}：${r.date} / ${yen(r.amount)}`)){renderReceipts(find(c.id));$('#fc-dialog-title').textContent=c.id+' · '+C.state(find(c.id));$('#fc-receipt-error').textContent='';}}catch(err){$('#fc-receipt-error').textContent=err.message;}
 };
 $('#fc-receipt-cancel').onclick=()=>{renderReceipts(find(edit));$('#fc-receipt-error').textContent='';};
 function rangeChange(){const o={start:$('#fc-from').value,end:$('#fc-to').value};try{for(const value of [o.start,o.end])if(value){F.parse(value);if(value<'2000-01-01')throw Error();}}catch{$('#fc-range-error').textContent='2000年以降の有効な日付を指定してください。';return;}if(o.start&&o.end&&o.start>o.end){$('#fc-range-error').textContent='開始日は終了日以前にしてください。';return;}if(o.start>today()||o.end>today()){$('#fc-range-error').textContent='今日までの日付を指定してください。';return;}$('#fc-range-error').textContent='';activeRange=o;renderFactoring();}
@@ -90,7 +90,7 @@ for(const id of ['fc-from','fc-to']){$('#'+id).max=today();$('#'+id).onchange=ra
 $('#fc-scope').onchange=rangeChange;$('#fc-search').oninput=renderFactoring;$('#fc-status-filter').onchange=e=>{caseFilter=e.target.value;renderFactoring()};
 $('#fc-all-time').onclick=()=>{$('#fc-from').value='';$('#fc-to').value='';rangeChange()};
 $('#fc-this-month').onclick=()=>{$('#fc-from').value=F.range('month',today()).start;$('#fc-to').value=today();rangeChange()};
-$('#fc-load-demo').onclick=()=>{if(flatten().length||!confirm('既存顧客・取引はそのままに、サンプル顧客へ架空の審査・入金案件を追加しますか？'))return;const next=C.seed(customers);if(!next.some(c=>c.factoringCases.length)){notify('対応するサンプル顧客がいません。申込を登録してお試しください。');return;}if(persist(next)){render();notify('架空の審査サンプルを追加しました。');}};
+$('#fc-load-demo').onclick=async ()=>{if(flatten().length||!confirm('既存顧客・取引はそのままに、サンプル顧客へ架空の審査・入金案件を追加しますか？'))return;const next=C.seed(customers);if(!next.some(c=>c.factoringCases.length)){notify('対応するサンプル顧客がいません。申込を登録してお試しください。');return;}if(await persist(next)){render();notify('架空の審査サンプルを追加しました。');}};
 window.addEventListener('crm-render',renderFactoring);
 window.addEventListener('crm-open-case',e=>{if(find(e.detail.id))openCase(e.detail.id)});
 renderFactoring();
