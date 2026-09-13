@@ -92,5 +92,6 @@ $('#fc-all-time').onclick=()=>{$('#fc-from').value='';$('#fc-to').value='';range
 $('#fc-this-month').onclick=()=>{$('#fc-from').value=F.range('month',today()).start;$('#fc-to').value=today();rangeChange()};
 $('#fc-load-demo').onclick=()=>{if(flatten().length||!confirm('既存顧客・取引はそのままに、サンプル顧客へ架空の審査・入金案件を追加しますか？'))return;const next=C.seed(customers);if(!next.some(c=>c.factoringCases.length)){notify('対応するサンプル顧客がいません。申込を登録してお試しください。');return;}if(persist(next)){render();notify('架空の審査サンプルを追加しました。');}};
 window.addEventListener('crm-render',renderFactoring);
+window.addEventListener('crm-open-case',e=>{if(find(e.detail.id))openCase(e.detail.id)});
 renderFactoring();
 })();
