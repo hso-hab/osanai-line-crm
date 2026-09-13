@@ -1,7 +1,11 @@
 'use strict';
 (()=>{
  const el=document.getElementById('crm-bootstrap');
- if(!el){window.CRMStore=localStorage;return;}
+ if(!el){
+ const keys=['osanai-line-crm-demo-v1','osanai-crm-workbench-v5','osanai-crm-write-lock-v5'],snapshot=new Map(keys.map(k=>[k,localStorage.getItem(k)]));
+ const check=()=>{for(const k of keys)if(localStorage.getItem(k)!==snapshot.get(k))throw Error('別のタブで更新されました。入力を控えて再読み込みしてください。上書きはしていません。');};
+ window.CRMStore={getItem:k=>localStorage.getItem(k),setItem(k,v){check();localStorage.setItem(k,v);snapshot.set(k,v);},removeItem(k){check();localStorage.removeItem(k);snapshot.set(k,null);}};return;
+ }
  const initial=JSON.parse(el.textContent);el.remove();let state=initial.state,busy=false,edits=0,savedEdits=0;
  for(const event of ['input','change'])document.addEventListener(event,e=>{if(e.target.closest('form'))edits++;});
  const keys={'osanai-line-crm-demo-v1':'customers','osanai-crm-workbench-v5':'work','osanai-crm-write-lock-v5':'locked'};

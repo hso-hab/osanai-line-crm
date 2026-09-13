@@ -63,6 +63,7 @@ $('#fc-form').elements.status.onchange=syncFields;
 $('#fc-form').onsubmit=async e=>{e.preventDefault();const f=e.currentTarget;const c=edit?find(edit):null;
  try{
  const next={...(c||{}),id:c?.id||'FC-'+crypto.randomUUID().slice(0,8),customerId:f.elements.customer.value,void:false,receipts:c?.receipts||[]};
+ if(f.elements.adLeadId)next.adLeadId=f.elements.adLeadId.value;
  for(const k of ['reference','debtor','status','decisionDate','applicationDate','purchaseDate','dueDate','reason','memo'])next[k]=f.elements[k].value.trim();
  for(const k of ['invoiceAmount','requestedAmount','purchaseAmount','cost'])next[k]=F.amount(f.elements[k].value||'0');
  if(c?.status==='purchased'&&next.status!=='purchased')throw Error('買取済の審査履歴は巻き戻せません。誤登録は案件取消で除外してください。');
@@ -70,7 +71,7 @@ $('#fc-form').onsubmit=async e=>{e.preventDefault();const f=e.currentTarget;cons
  if(!['approved','rejected','purchased'].includes(next.status))next.decisionDate='';if(next.status!=='rejected')next.reason='';
  const selectedCustomer=customers.find(c=>c.id===next.customerId);if(!selectedCustomer)throw Error('顧客を選択してください。');const review=window.CRMOperations.decisionGuard(selectedCustomer,c,next,{ack:f.elements.reviewAck.checked,reviewer:f.elements.reviewer.value,reason:f.elements.reviewReason.value});if(review)next.noticeReview=review;C.validate(next);
  if(['approved','rejected','purchased'].includes(next.status)&&(!c||['status','invoiceAmount','purchaseAmount','cost','purchaseDate','dueDate'].some(k=>c[k]!==next[k]))&&!confirm(`${selectedCustomer.name} の案件を保存しますか？\n状態：${C.labels[next.status]}\n請求書額面：${yen(next.invoiceAmount)}\n買取額：${yen(next.purchaseAmount)}\n費用：${yen(next.cost)}\n回収期日：${next.dueDate||'未設定'}`))return;
- const desc=`${C.labels[next.status]} / 希望 ${yen(next.requestedAmount)} / 買取 ${yen(next.purchaseAmount)} / 額面 ${yen(next.invoiceAmount)} / 費用 ${yen(next.cost)} / 申込 ${next.applicationDate} / 審査 ${next.decisionDate||'未設定'} / 買取日 ${next.purchaseDate||'未設定'} / 期日 ${next.dueDate||'未設定'}`;
+ const desc=`送客 ${next.adLeadId||'顧客の初回流入'} / ${C.labels[next.status]} / 希望 ${yen(next.requestedAmount)} / 買取 ${yen(next.purchaseAmount)} / 額面 ${yen(next.invoiceAmount)} / 費用 ${yen(next.cost)} / 申込 ${next.applicationDate} / 審査 ${next.decisionDate||'未設定'} / 買取日 ${next.purchaseDate||'未設定'} / 期日 ${next.dueDate||'未設定'}`;
  if(await update(next.id,next,(c?'更新':'登録')+'：'+desc+(review?'\n責任者確認：'+review.reviewer+' / '+review.reason:'')+(c?'\n変更前：'+JSON.stringify({status:c.status,requestedAmount:c.requestedAmount,purchaseAmount:c.purchaseAmount,invoiceAmount:c.invoiceAmount,cost:c.cost,applicationDate:c.applicationDate,decisionDate:c.decisionDate,purchaseDate:c.purchaseDate,dueDate:c.dueDate,reference:c.reference,debtor:c.debtor,reason:c.reason,memo:c.memo}):''))){openCase(next.id);notify('案件を保存し、審査・買取・回収集計を更新しました。');}
  }catch(err){$('#fc-error').textContent=err.message;}
 };
